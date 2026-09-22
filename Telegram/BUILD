@@ -1287,11 +1287,6 @@ plist_fragment(
             <array/>
             <key>IntentsSupported</key>
             <array>
-                <string>INSendMessageIntent</string>
-                <string>INStartAudioCallIntent</string>
-                <string>INSearchForMessagesIntent</string>
-                <string>INSetMessageAttributeIntent</string>
-                <string>INSearchCallHistoryIntent</string>
                 <string>SelectFriendsIntent</string>
                 <string>SelectAvatarFriendsIntent</string>
             </array>
@@ -1635,6 +1630,8 @@ plist_fragment(
     <string>You can use Face ID to unlock the app.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>When you send your location to your friends, Telegram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>We need this so that you can share your live location with your chats.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>When you send your location to your friends, Telegram needs access to show them a map.</string>
     <key>NSMicrophoneUsageDescription</key>
@@ -1645,13 +1642,10 @@ plist_fragment(
     <string>We need this so that you can share photos and videos from your photo library.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>We need this so that you can share photos and videos from your photo library.</string>
-    <key>NSSiriUsageDescription</key>
-    <string>You can use Siri to send messages.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>We need this to transcribe audio messages on your request.</string>
     <key>NSUserActivityTypes</key>
     <array>
-        <string>INSendMessageIntent</string>
         <string>RemindAboutChatIntent</string>
     </array>
     <key>UIAppFonts</key>
