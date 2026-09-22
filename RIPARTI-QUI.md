@@ -94,6 +94,32 @@ lascia senza file **apposta**. Se ci metti un PNG, actool ferma la build con
 (build 11, 22/09/2026, persi 18 minuti). L'avviso `ITMS-90892` riguarda 152 e 167,
 cioè `76x76@2x` e `83.5x83.5@2x`, che ci sono già.
 
+## 🔴 Siri: dichiarare ESATTAMENTE gli intent che hanno le frasi
+
+I 19 `Telegram-iOS/*.lproj/AppIntentVocabulary.plist` contengono frasi di esempio
+**solo per `INSendMessageIntent`**. Da qui discendono due errori opposti:
+
+- se dichiari un intent **senza** frasi → `ITMS-90626 No example phrase was provided`,
+  un avviso per ogni intent per ogni lingua (76 righe: erano `INStartAudioCallIntent`,
+  `INSearchForMessagesIntent`, `INSetMessageAttributeIntent`, `INSearchCallHistoryIntent`).
+  Fastidioso ma **non blocca**
+- se togli un intent **lasciando** le sue frasi → `ITMS-90626 contains a phrase that
+  belongs to unsupported intent`, e Apple **scarta la build in lavorazione**. È successo
+  alle build 12 e 13 del 22/09/2026: `UPLOAD SUCCEEDED`, e poi mai comparse su ASC
+
+🔴 **`NSSiriUsageDescription` è obbligatoria comunque**, anche con `enable_siri = False`
+nella configurazione: il codice collega il framework Intents, e ad Apple basta quello
+(`ITMS-90683`). Toglierla scarta la build.
+
+🔴 **L'estensione intent non si può eliminare**: gestisce `SelectFriendsIntent` e
+`SelectAvatarFriendsIntent`, cioè la scelta dei contatti del widget
+(`SiriIntents/IntentHandler.swift`).
+
+🔴 **Una build scartata in lavorazione non lascia traccia nell'API**: non compare fra i
+`/builds`, non c'è nessuno stato da interrogare. L'unico segnale è l'email di Apple.
+Distinguere «you may want to correct» (avvisi, consegnata) da «Please correct the
+following issues» (scartata).
+
 ## Le nostre modifiche a Telegram (tutte nel commit)
 
 - nome visibile **Gino** in `Telegram/BUILD`: due `CFBundleDisplayName` più il
