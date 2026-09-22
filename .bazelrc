@@ -40,22 +40,9 @@ common:index_build --noshow_timestamps
 common:index_build --curses=no
 common:index_build --color=no
 
-# Pulsar: il compilatore Swift di Xcode 27 ha introdotto la diagnostica
-# ImplicitStrongCapture, che il codice di Telegram (scritto per Xcode 26)
-# fa scattare in decine di file. Non sono errori nostri e non si correggono
-# a mano su un milione di righe: si abbassano ad avviso.
-build --@build_bazel_rules_swift//swift:copt=-Wwarning
-build --@build_bazel_rules_swift//swift:copt=ImplicitStrongCapture
 
-# Pulsar: alzando il minimo a iOS 15 (obbligato da Xcode 27) diventano deprecate
-# funzioni che Telegram usa ovunque perche' mirava a iOS 13. Restano avvisi, non
-# fermano piu' la compilazione.
-build --copt=-Wno-error=deprecated-declarations
-build --objccopt=-Wno-error=deprecated-declarations
-build --@build_bazel_rules_swift//swift:copt=-Wwarning
-build --@build_bazel_rules_swift//swift:copt=DeprecatedDeclaration
-build --@build_bazel_rules_swift//swift:copt=-Wwarning
-build --@build_bazel_rules_swift//swift:copt=NoUseUnstructuredThrowingTask
+
+
 
 # Pulsar: bazel non legge l'Xcode di sistema e sceglie da solo il piu' recente,
 # cioe' la beta. Con la beta Apple rifiuta il caricamento (errore 90534).
