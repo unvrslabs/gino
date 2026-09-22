@@ -1,4 +1,4 @@
-# Pulsar — riparti qui
+# Gino (ex Pulsar) — riparti qui
 
 Telegram iOS forkato e rimarchiato, agganciato ai **server veri di Telegram**.
 Cartella locale `~/Developer/pulsar-ios`, repo pubblico `github.com/unvrslabs/pulsar` (ramo `pulsar`).
@@ -6,8 +6,8 @@ Cartella locale `~/Developer/pulsar-ios`, repo pubblico `github.com/unvrslabs/pu
 ## Stato al 22/09/2026, 11:30
 
 🟢 **Su TestFlight e funzionante.** Build 10, versione 12.9.2, `dev.unvrslabs.pulsar`.
-Nome sullo store `UNVRS Pulsar` (perché «Pulsar» da solo era già preso da un'altra app),
-nome sotto l'icona **Pulsar**. Gruppo interno `Squadra UNVRS`, invitati
+Nome sullo store `UNVRS Pulsar`, 🔴 **da cambiare a mano su App Store Connect**.
+Nome sotto l'icona: **Gino** dalla build 11 (prima era Pulsar). Gruppo interno `Squadra UNVRS`, invitati
 `emanuele@maccari.io` e `emanuele@unvrslabs.dev`. App su App Store Connect: id **6814719172**.
 
 ## 🔴 Come si pubblica una versione nuova
@@ -55,11 +55,35 @@ Per usarla: `sudo xcode-select -s /Applications/Xcode-beta.app`.
 5. **Il runner ha Xcode 26.2 preinstallato** in `/Applications/Xcode_26.2.app`, la
    versione esatta che Telegram richiede in `versions.json`. Basta `xcode-select -s`.
 
+## 🔴 L'icona vera NON sta in DefaultAppIcon.xcassets
+
+Scoperto il 22/09/2026. L'icona del piccione era stata messa in
+`Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset`, ma:
+
+- quel catalogo è **commentato fuori** dalle risorse (`Telegram/BUILD:1786`)
+- `app_icons` prendeva da `Telegram-iOS/Telegram.icon`, il formato Icon Composer
+  di Xcode 26 (`icon.json` + `Oval.svg` + `Plane.svg`): **l'aeroplanino di Telegram**
+
+Quindi la build 10 su TestFlight aveva ancora l'icona loro. Corretto mettendo
+`app_icons = [":DefaultAppIcon"]` (`Telegram/BUILD:1780`). `rules_apple` accetta sia
+`.appiconset/` sia `.icon/`, vedi `_STANDARD_ICONS` in
+`build-system/bazel-rules/rules_apple/apple/internal/partials/app_assets_validation.bzl`.
+
+🔴 **Niente cartelle di backup dentro un `.xcassets`**: actool le legge. Il backup
+dell'icona Telegram sta in `Telegram-iOS/_icone-vecchie/`.
+
+Le icone alternative (Impostazioni ▸ Icona app) sono ancora gli aeroplanini di
+Telegram: stanno nelle cartelle `Telegram-iOS/*.alticon/`, elencate in
+`alternate_icon_folders`.
+
 ## Le nostre modifiche a Telegram (tutte nel commit)
 
-- nome visibile **Pulsar** in `Telegram/BUILD` (due `CFBundleDisplayName`)
-- icona nuova in `Telegram/Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset`
-  (17 file rigenerati dal ritratto del piccione, master in `/tmp/pulsar-icona-finale.png`)
+- nome visibile **Gino** in `Telegram/BUILD`: due `CFBundleDisplayName` più il
+  `CFBundleName` dell'app principale (🔴 NON quelli dei framework, che restano loro)
+- `app_icons` spostato su `:DefaultAppIcon` (vedi la trappola dell'icona qui sopra)
+- icona in `Telegram/Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset`:
+  18 file rigenerati dal ritratto del piccione a 2048 con zoom 1.12, master su
+  `~/Desktop/hf_20260922_071033_*.png`. Aggiunta la casella iPad 76x76 1x
 - `third-party/dav1d/build-dav1d-bazel.sh`: usa `xcode-select -p` invece del percorso
   scritto a mano `/Applications/Xcode.app`. **Bug loro**: per il simulatore lo facevano
   già, per il telefono no
@@ -100,19 +124,17 @@ contestare a un fork.
 - `ITMS-90068` iOS minimo 13: dalla primavera 2027 servirà 15. Alzarlo in
   `Telegram/BUILD` e `submodules/TextFormat/BUILD`, ma con Xcode 27 quel cambio
   fa scattare le deprecazioni come errori
-- `ITMS-90892` mancano le icone iPad 152 e 167: da generare
 - `ITMS-90626` frasi Siri in ottanta lingue: roba di Telegram, Siri è spento in
   configurazione, è rumore
 - `ITMS-90683` manca `NSLocationAlwaysAndWhenInUseUsageDescription`
 
 ## Da fare
 
-- Icone iPad 152 e 167 (mezz'ora)
 - Lista bianca dei contatti: filtro nel client per vedere solo le persone in elenco,
   più niente nome utente pubblico e numero chiuso nelle impostazioni Telegram.
   🔴 La lista NON va scritta nell'app, va letta all'avvio da un file sul VPS
-- Icona: quella attuale è generata con Higgsfield dal ritratto del piccione. Emanuele
-  vuole rifarne una definitiva
+- Icone alternative: sostituire gli aeroplanini nelle cartelle `*.alticon/`
+- Cambiare il nome su App Store Connect (ora è ancora `UNVRS Pulsar`)
 - Capire perché al primo avvio col cavo l'app si chiudeva (poi partiva lanciata dal Mac)
 
 ## Salvare la cache tra le corse
