@@ -43,6 +43,17 @@ jobs:
           bazelisk --version
           bazelisk --version
 
+      # 🔴 --cacheDir di Make.py diventa --disk_cache di Bazel: e' una cache a
+      # contenuto, quindi si porta da una corsa all'altra senza problemi di
+      # percorsi. Senza, ogni build ricompila WebRTC e FFmpeg da zero: un'ora.
+      - name: Riprendi la cache di Bazel
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/bazel-cache
+          key: bazel-macos26-${{ github.sha }}
+          restore-keys: |
+            bazel-macos26-
+
       - name: Rimetti il certificato di firma nel portachiavi
         env:
           CERT_P12: ${{ secrets.CERT_DISTRIBUZIONE_P12 }}
@@ -113,6 +124,37 @@ jobs:
           xcrun altool --upload-app -f bazel-bin/Telegram/Telegram.ipa -t ios \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER"
           rm -f ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      # 🔴 GitHub concede 10 GB di cache per repo e sfratta le piu' vecchie.
+      # Si pota a 6 GB togliendo i file toccati meno di recente, sennó una
+      # cache gonfia butta fuori tutto il resto.
+      - name: Pota la cache di Bazel
+        if: always()
+        continue-on-error: true
+        run: |
+          TETTO=$((6 * 1024 * 1024))   # in KB
+          D="$HOME/bazel-cache"
+          [ -d "$D" ] || exit 0
+          USATI=$(du -sk "$D" | cut -f1)
+          echo "cache: $((USATI / 1024)) MB"
+          if [ "$USATI" -gt "$TETTO" ]; then
+            echo "oltre il tetto, poto i file meno recenti"
+            find "$D" -type f -print0 \
+              | xargs -0 stat -f '%a %z %N' \
+              | sort -n \
+              | awk -v tetto=$((TETTO * 1024)) -v usati=$((USATI * 1024)) '
+                  { if (usati <= tetto) exit; usati -= $2; $1=""; $2=""; sub(/^  /,""); print }
+                ' \
+              | tr '\n' '\0' | xargs -0 rm -f
+            echo "cache dopo: $(($(du -sk "$D" | cut -f1) / 1024)) MB"
+          fi
+
+      - name: Salva la cache di Bazel
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/bazel-cache
+          key: bazel-macos26-${{ github.sha }}
 
       - name: Tieni da parte il pacchetto
         if: always()
