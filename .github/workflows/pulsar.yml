@@ -36,6 +36,12 @@ jobs:
         run: |
           brew install bazelisk
           echo "8.4.2" > .bazelversion
+          # 🔴 Scaldarlo qui e' obbligatorio: al PRIMO avvio bazelisk stampa i
+          # messaggi di scaricamento insieme alla versione, e il controllo di
+          # Telegram ("deve cominciare per 'bazel '") lo rifiuta dicendo che
+          # non e' un binario valido.
+          bazelisk --version
+          bazelisk --version
 
       - name: Rimetti il certificato di firma nel portachiavi
         env:
