@@ -1,98 +1,122 @@
 # Pulsar — riparti qui
 
-Telegram iOS forkato e rimarchiato, agganciato ai server veri di Telegram.
-Cartella: `~/Developer/pulsar-ios`
+Telegram iOS forkato e rimarchiato, agganciato ai **server veri di Telegram**.
+Cartella locale `~/Developer/pulsar-ios`, repo pubblico `github.com/unvrslabs/pulsar` (ramo `pulsar`).
 
-## Stato al 22/09/2026, 07:10
+## Stato al 22/09/2026, 11:30
 
-Il pacchetto **c'e' ed e' firmato**: `bazel-bin/Telegram/Telegram.ipa` (71 MB).
-Nome visibile **Pulsar**, `dev.unvrslabs.pulsar`, versione 12.9.2 build 1, iOS 15 minimo,
-sei estensioni dentro, team 6C42B7B97B.
+🟢 **Su TestFlight e funzionante.** Build 10, versione 12.9.2, `dev.unvrslabs.pulsar`.
+Nome sullo store `UNVRS Pulsar` (perché «Pulsar» da solo era già preso da un'altra app),
+nome sotto l'icona **Pulsar**. Gruppo interno `Squadra UNVRS`, invitati
+`emanuele@maccari.io` e `emanuele@unvrslabs.dev`. App su App Store Connect: id **6814719172**.
 
-## 🔴 L'UNICA cosa che manca
-
-La **scheda dell'app su App Store Connect**. Non si crea via API (403 FORBIDDEN,
-`apps` non permette CREATE): si fa solo dal sito, con l'accesso di Emanuele.
-
-1. Emanuele entra su appstoreconnect.apple.com
-2. App → `+` → Nuova app → iOS → Nome `Pulsar` → Lingua Italiano →
-   ID pacchetto `dev.unvrslabs.pulsar` → SKU `PULSAR2026` → Accesso completo
-3. Poi, da qui: `bash scripts/carica-testflight.sh` (sei secondi)
-4. TestFlight → Test interni → invita `emanuele@maccari.io` (niente revisione Apple)
-
-## Come si ricostruisce
+## 🔴 Come si pubblica una versione nuova
 
 ```
-python3 build-system/Make/Make.py \
-  --cacheDir="$HOME/telegram-bazel-cache" \
-  --bazel="$(which bazelisk)" \
-  --overrideXcodeVersion --overrideBazelVersion \
-  build \
-  --configurationPath="$HOME/Developer/_segreti/pulsar-configuration.json" \
-  --codesigningInformationPath="$HOME/Developer/pulsar-ios/codesigning" \
-  --buildNumber=1 --configuration=release_arm64
+gh workflow run pulsar.yml --repo unvrslabs/pulsar -f numero=11
 ```
 
-Circa 15 minuti a freddo. Le chiavi Telegram stanno in
-`~/Developer/_segreti/pulsar-configuration.json` (permessi 600, fuori dal repo).
+Un comando, da qualunque macchina. Il numero va **alzato ogni volta**: Apple rifiuta
+due build con lo stesso. Costruisce, controlla, carica su TestFlight e l'invito parte da sé.
 
-## 🔴 Le sette correzioni per Xcode 27 (senza queste non compila)
+## 🔴 Perché NON si compila sul Mac di Emanuele
 
-Telegram fissa **Xcode 26.2** in `versions.json`. Sul Mac c'e' la **27 beta**.
-Si forza con `--overrideXcodeVersion`, poi servono queste:
+Il Mac gira una **beta di macOS** (build `26A5425a`). Da lì discende tutto:
 
-1. **dav1d**: `third-party/dav1d/build-dav1d-bazel.sh` scriveva a mano
-   `/Applications/Xcode.app`, che qui si chiama `Xcode-beta.app`. Bug loro: per il
-   simulatore usano `xcode-select -p`, per il telefono no. Copiata la stessa cura.
-2. **iOS minimo 13 -> 15** in `Telegram/BUILD` e `submodules/TextFormat/BUILD`:
-   la libreria C++ di Xcode 27 rifiuta tutto sotto iOS 15.
-3. **`.bazelrc`**: `ImplicitStrongCapture` abbassata ad avviso (diagnostica nuova).
-4. **Tolto `-suppress-warnings`** da `submodules/TelegramCore/FlatBuffers/BUILD`,
-   `third-party/Swift2D/BUILD`, `third-party/XMLCoder/BUILD`: litigava col punto 3.
-5. **`.bazelrc`**: deprecazioni ad avviso (`-Wno-error=deprecated-declarations` per
-   C/ObjC, gruppo `DeprecatedDeclaration` per Swift). Conseguenza del punto 2.
-6. **`.bazelrc`**: gruppo `NoUseUnstructuredThrowingTask` ad avviso.
-   🔴 Il nome NON e' quello del link della documentazione
-   (`no-use-throwing-unstructured-task` -> si direbbe `NoUseThrowingUnstructuredTask`,
-   ma il compilatore vuole `NoUseUnstructuredThrowingTask`). Si scopre solo provando:
-   `xcrun swiftc -typecheck -Wwarning <nome> file.swift` avvisa se il gruppo non esiste.
-7. **`ChatControllerNode.swift`**: `EmptyInputView` e' definita **pubblica due volte**
-   dentro Telegram (in `ChatEntityKeyboardInputNode` e in `TextFieldComponent`), identica.
-   Xcode 27 non sceglie piu'. 🔴 Qualificare col modulo NON funziona: in tutti e due i
-   casi modulo e classe interna hanno lo stesso nome e vince la classe. Risolto
-   dichiarando una `PulsarEmptyInputView` locale (sono quattro righe).
+- con una beta di Xcode, Apple **rifiuta il caricamento**: errore `90534`,
+  «Unsupported SDK or Xcode version»
+- Xcode 26.2 rilasciato **non si avvia** su quel sistema (`-10664`, versione
+  incompatibile), quindi macOS non lo registra, quindi `xcode-locator` di Bazel
+  non lo trova e Bazel prende l'unico che vede: la beta. Cerchio chiuso.
+- Vale anche per la **Release Candidate**: provata, stesso errore.
+- `softwareupdate -l` offre solo altre beta: il Mac è iscritto al programma beta.
 
-Ogni interruttore nuovo in `.bazelrc` invalida la cache dei moduli Swift: si rifa'
-da ~4.800 pezzi su 6.001.
+Non è un problema di Pulsar: **nessuna app di UNVRS si può caricare da questo Mac**
+finché c'è la beta. La compilazione in cloud serve per tutte.
 
-## Trappole del sistema di compilazione
+Xcode 26.2 resta installato in `/Applications/Xcode.app` (inutile in locale).
+La beta è tornata al suo posto in `/Applications/Xcode-beta.app`.
+Per usarla: `sudo xcode-select -s /Applications/Xcode-beta.app`.
 
-- `--bazelArguments` di `Make.py` **e' dichiarato ma non usato**: gli argomenti extra
-  per bazel vanno messi in `.bazelrc`.
-- Non esiste `--swiftcopt`: si usa `--@build_bazel_rules_swift//swift:copt=...`,
-  ripetibile una volta per argomento.
-- `build:macos --strategy=...` batte `build --strategy=...`: per cambiare strategia
-  va modificata la riga `:macos`.
-- Il worker Swift non stampa l'errore vero. Per vederlo: rieseguire a mano il comando
-  con `DEVELOPER_DIR` e `SDKROOT` impostati (vedi `/tmp/vedi-errore-ui.sh` del 22/09).
-- `--xcodeManagedCodesigning` vale solo dentro Xcode: da riga di comando servono i
-  profili veri, uno per estensione.
+## 🔴 Le cinque trappole di GitHub Actions, tutte incontrate
 
-## Cosa c'e' e cosa no in un fork
+1. **L'etichetta della macchina è `macos-26`**, non `macos-26-arm64`: quello è il nome
+   dell'immagine. Con il nome sbagliato il lavoro resta **in coda per sempre** senza
+   errore (38 minuti buttati). L'elenco vero sta nel README di `actions/runner-images`.
+2. **Sotto-moduli con indirizzi relativi** (`url=../tgcalls.git`): su un fork si
+   risolvono sotto il NOSTRO account e non esistono. Vanno resi assoluti verso
+   `TelegramMessenger`. Riguarda `tgcalls` e `rlottie`.
+3. **Bazelisk al primo avvio** stampa i messaggi di scaricamento insieme alla versione,
+   e il controllo di Telegram («deve cominciare per `bazel `») lo rifiuta dicendo che
+   non è un binario valido. Si chiama due volte `bazelisk --version` prima.
+4. **L'archivio dei profili contiene già la cartella `codesigning`**: va estratto nella
+   radice (`tar xz -C .`), non dentro `codesigning`. Se annidato, la compilazione dice
+   «Could not find a valid aps-environment entitlement», che manda fuori strada.
+5. **Il runner ha Xcode 26.2 preinstallato** in `/Applications/Xcode_26.2.app`, la
+   versione esatta che Telegram richiede in `versions.json`. Basta `xcode-select -s`.
 
-Tutto quello che vive sui server di Telegram funziona: chiamate voce e video, bot,
+## Le nostre modifiche a Telegram (tutte nel commit)
+
+- nome visibile **Pulsar** in `Telegram/BUILD` (due `CFBundleDisplayName`)
+- icona nuova in `Telegram/Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset`
+  (17 file rigenerati dal ritratto del piccione, master in `/tmp/pulsar-icona-finale.png`)
+- `third-party/dav1d/build-dav1d-bazel.sh`: usa `xcode-select -p` invece del percorso
+  scritto a mano `/Applications/Xcode.app`. **Bug loro**: per il simulatore lo facevano
+  già, per il telefono no
+- `submodules/TelegramUI/Sources/ChatControllerNode.swift`: `EmptyInputView` è definita
+  **pubblica due volte** dentro Telegram (in `ChatEntityKeyboardInputNode` e in
+  `TextFieldComponent`), identica. Risolto con una classe locale. 🔴 Qualificare col
+  modulo NON funziona: in entrambi i casi modulo e classe interna hanno lo stesso nome
+  e vince la classe
+- `.gitmodules`: indirizzi assoluti (trappola 2)
+- `.github/workflows/pulsar.yml`: la procedura
+
+## Segreti
+
+Su GitHub (`gh secret list --repo unvrslabs/pulsar`): `CERT_DISTRIBUZIONE_P12`,
+`CERT_DISTRIBUZIONE_PWD`, `PROFILI_TGZ`, `CONFIGURAZIONE_JSON`, `ASC_AUTHKEY_P8`,
+`ASC_KEY_ID`, `ASC_ISSUER_ID`.
+Si rifanno con `bash scripts/prepara-cloud.sh` (lo lancia Emanuele: tocca la chiave
+privata di firma). In locale le chiavi Telegram stanno in
+`~/Developer/_segreti/pulsar-configuration.json`, permessi 600, fuori dal repo.
+
+Identificativi: 7 (app più Share, Widget, NotificationContent, NotificationService,
+SiriIntents, BroadcastUpload). Profili App Store in `codesigning/`, di sviluppo in
+`codesigning-dev/`. Entrambe le cartelle sono ignorate da git.
+
+## Cosa c'è e cosa no in un fork
+
+Funziona tutto quello che vive sui server di Telegram: chiamate voce e video, bot,
 mini app, canali, chat segrete, vocali, adesivi.
-Non funziona quello che passa dalla cassa di Apple: comprare Premium e ricaricare
-le Stars (i product id sono dell'account di Telegram).
-I permessi speciali (VoIP senza limiti, CarPlay, filtro notifiche, Apple Pay, Siri,
-iCloud) si spengono da soli nel loro BUILD quando l'identificativo non e' il loro:
-Apple non ha niente da contestare.
+Non funziona quello che passa dalla cassa di Apple: comprare Premium e ricaricare le
+Stars (i product id sono dell'account di Telegram). Il portafoglio TON non è nel
+codice, è una mini app di terzi.
+I permessi speciali (VoIP senza limiti, CarPlay, filtro notifiche, Apple Pay) si
+spengono da soli quando l'identificativo non è il loro: Apple non ha niente da
+contestare a un fork.
 
-## Da fare dopo
+## Avvisi di Apple sulla build 10 (nessuno blocca)
 
-- Icona: ora e' ancora quella di Telegram. 🔴 Il loro README chiede esplicitamente di
-  non usarla. Va rifatta prima di qualunque uso vero.
-- Lista bianca dei contatti (il "trucco" della stanza chiusa): filtro nel client, piu'
-  niente nome utente pubblico e numero chiuso nelle impostazioni Telegram.
-- Publicazione del codice modificato: la licenza lo richiede. Repo `pulsar` sotto
-  l'account `unvrslabs`.
+- `ITMS-90068` iOS minimo 13: dalla primavera 2027 servirà 15. Alzarlo in
+  `Telegram/BUILD` e `submodules/TextFormat/BUILD`, ma con Xcode 27 quel cambio
+  fa scattare le deprecazioni come errori
+- `ITMS-90892` mancano le icone iPad 152 e 167: da generare
+- `ITMS-90626` frasi Siri in ottanta lingue: roba di Telegram, Siri è spento in
+  configurazione, è rumore
+- `ITMS-90683` manca `NSLocationAlwaysAndWhenInUseUsageDescription`
+
+## Da fare
+
+- Icone iPad 152 e 167 (mezz'ora)
+- Lista bianca dei contatti: filtro nel client per vedere solo le persone in elenco,
+  più niente nome utente pubblico e numero chiuso nelle impostazioni Telegram.
+  🔴 La lista NON va scritta nell'app, va letta all'avvio da un file sul VPS
+- Icona: quella attuale è generata con Higgsfield dal ritratto del piccione. Emanuele
+  vuole rifarne una definitiva
+- Capire perché al primo avvio col cavo l'app si chiudeva (poi partiva lanciata dal Mac)
+
+## Salvare la cache tra le corse
+
+La prima build in cloud è durata **un'ora** perché compilava WebRTC e FFmpeg da zero.
+Aggiungendo `actions/cache` su `~/bazel-cache` le successive scendono a pochi minuti.
+Non fatto ancora.
