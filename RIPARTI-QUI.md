@@ -172,6 +172,48 @@ contestare a un fork.
   configurazione, è rumore
 - `ITMS-90683` manca `NSLocationAlwaysAndWhenInUseUsageDescription`
 
+## Banco locale col simulatore (22/09/2026 sera, in piedi a meta')
+
+Worktree `~/Developer/gino-simulatore`, ramo `banco-simulatore`. Serve a vedere le
+modifiche in minuti invece di passare da TestFlight. Differisce da `master` solo per
+le impostazioni dell'Xcode beta: `.bazelrc` e `minimum_os_version` a 15.0 in
+`Telegram/BUILD` e `submodules/TextFormat/BUILD`.
+
+```
+cd ~/Developer/gino-simulatore
+python3 build-system/Make/Make.py --overrideXcodeVersion --cacheDir ~/telegram-bazel-cache \
+  build --configurationPath ~/Developer/_segreti/pulsar-configuration.json \
+  --codesigningInformationPath "$PWD/codesigning-dev" --buildNumber=1 --configuration=debug_sim_arm64
+```
+
+**Compila** (11 minuti la prima volta) e l'app **si installa**. 🔴 **Ma non si apre.**
+
+### Le trappole gia' pagate
+
+1. **Un worktree non porta i sotto-moduli**: `git submodule update --init --recursive`
+   nel banco. Sono 13, non riscarica niente perche' i dati sono gia' in locale.
+2. **Le cartelle `codesigning/` e `codesigning-dev/` sono ignorate da git**, quindi nel
+   worktree non ci sono: vanno copiate da `~/Developer/pulsar-ios`.
+3. **`-suppress-warnings` nei BUILD va in conflitto** con il `-Wwarning` che serve alla
+   beta: `error: conflicting options`. Nel banco va tolto da `FlatBuffers`, `Swift2D`,
+   `XMLCoder`.
+4. 🔴 **L'app crasha all'avvio sul simulatore iOS 27**:
+   `UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`. iOS 27 pretende
+   l'adozione vera del ciclo di vita a scene, e Telegram e' scritta col modello vecchio.
+   Aggiungere `UIApplicationSceneManifest` al plist **NON basta**: provato, stesso crash.
+   Serve un `UISceneDelegate` vero, cioe' codice dentro Telegram.
+
+### Dove eravamo rimasti
+
+Scaricamento del **simulatore iOS 26.0** (`23A343`, 8 GB) avviato il 22/09 alle 23:02.
+L'idea: l'app e' scritta per iOS 26, e su quella versione di UIKit il controllo delle
+scene e' un avviso e non un errore (sul telefono di Emanuele, con iOS 26, la build 14
+gira). 🔴 **Da verificare**: qui l'app resta costruita con l'SDK 27, e non e' detto che
+basti il runtime piu' vecchio.
+
+Se non basta, l'unica strada pulita e' un Xcode 26 funzionante, che su questo Mac non
+parte per via della beta di macOS: vedi [[reference_mac_beta_niente_caricamenti_apple]].
+
 ## Da fare
 
 - Lista bianca dei contatti: filtro nel client per vedere solo le persone in elenco,
