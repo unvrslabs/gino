@@ -57,17 +57,38 @@ if (tester.data.length === 0) {
   console.log('::warning::il gruppo non ha tester dentro, nessuno ricevera invito')
 }
 
+// 🔴 /builds?filter[app]= mostra SOLO le build gia' VALID: una in lavorazione
+// li' non compare, e sembra persa. L'unico posto dove si vede subito e'
+// /preReleaseVersions?include=builds. La differenza conta: "PROCESSING" vuol
+// dire aspetta, "non compare affatto" vuol dire che Apple l'ha SCARTATA e
+// arrivera' solo un'email.
+async function cercaBuild () {
+  const v = await asc(`/preReleaseVersions?filter[app]=${APP}&include=builds&limit=10`)
+  return (v.included || []).find(x => x.attributes.version === NUMERO) || null
+}
+
 let build = null
+let vistaAlmenoUnaVolta = false
 for (let i = 0; i < ATTESA_MIN * 2; i++) {
-  const b = await asc(`/builds?filter[app]=${APP}&sort=-uploadedDate&limit=10`)
-  build = b.data.find(x => x.attributes.version === NUMERO)
-  if (build && build.attributes.processingState === 'VALID') break
-  console.log(`  ${new Date().toISOString().slice(11, 16)} build ${NUMERO}: ${build ? build.attributes.processingState : 'non ancora comparsa'}`)
-  build = null
+  const b = await cercaBuild()
+  if (b) {
+    vistaAlmenoUnaVolta = true
+    if (b.attributes.processingState === 'VALID') { build = b; break }
+    if (b.attributes.processingState === 'INVALID' || b.attributes.processingState === 'FAILED') {
+      console.log(`::error::Apple ha scartato la build ${NUMERO}: ${b.attributes.processingState}`)
+      process.exit(1)
+    }
+  }
+  const ora = new Date().toISOString().slice(11, 16)
+  console.log(`  ${ora} build ${NUMERO}: ${b ? b.attributes.processingState : 'non ancora comparsa'}`)
   await dormi(30000)
 }
 if (!build) {
-  console.log(`::error::dopo ${ATTESA_MIN} minuti la build ${NUMERO} non risulta valida su App Store Connect`)
+  if (!vistaAlmenoUnaVolta) {
+    console.log(`::error::dopo ${ATTESA_MIN} minuti la build ${NUMERO} non e' MAI comparsa: probabilmente Apple l'ha scartata, controllare l'email (\"Please correct the following issues\")`)
+  } else {
+    console.log(`::error::la build ${NUMERO} e' rimasta in lavorazione oltre ${ATTESA_MIN} minuti`)
+  }
   process.exit(1)
 }
 
