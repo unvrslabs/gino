@@ -14,7 +14,9 @@ jobs:
   costruisci:
     # 🔴 macOS 26.6 RILASCIATO, non beta: e' l'unico modo perche' Apple
     # accetti il caricamento. Con una beta risponde errore 90534.
-    runs-on: macos-26-arm64
+    # 🔴 L'etichetta e' 'macos-26', non 'macos-26-arm64': quel nome e' quello
+    # dell'immagine, non della macchina, e il lavoro resta in coda per sempre.
+    runs-on: macos-26
     timeout-minutes: 180
 
     steps:
