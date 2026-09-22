@@ -279,8 +279,13 @@ public struct PremiumConfiguration {
                 return (value as? Double).flatMap(Int32.init)
             }
             return PremiumConfiguration(
-                isPremiumDisabled: data["premium_purchase_blocked"] as? Bool ?? defaultValue.isPremiumDisabled,
-                areStarsDisabled: data["stars_purchase_blocked"] as? Bool ?? defaultValue.areStarsDisabled,
+                // Gino: Premium e Stars non si possono comprare da un fork, i product id
+                // (org.telegram.telegramPremium.*) stanno sull'account App Store di Telegram.
+                // Si usa l'interruttore che Telegram ha gia' per i paesi dove l'acquisto e'
+                // bloccato: nasconde l'acquisto ovunque e in modo coerente, ma lascia le
+                // funzioni a chi il Premium ce l'ha gia' sul suo account.
+                isPremiumDisabled: true,
+                areStarsDisabled: true,
                 subscriptionManagementUrl: data["premium_manage_subscription_url"] as? String ?? "",
                 showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? defaultValue.showPremiumGiftInAttachMenu,
                 showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? defaultValue.showPremiumGiftInTextField,
