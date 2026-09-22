@@ -3617,7 +3617,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
         
-    private let emptyInputView = EmptyInputView()
+    // Pulsar: due moduli diversi definiscono una EmptyInputView pubblica identica
+    // (ChatEntityKeyboardInputNode e TextFieldComponent) e il compilatore di Xcode 27
+    // non sceglie piu' da solo. Qualificare col modulo non si puo': in tutti e due i
+    // casi il modulo e una classe al suo interno si chiamano uguale, e vince la
+    // classe. Le due definizioni sono identiche, quindi se ne tiene una qui.
+    private final class PulsarEmptyInputView: UIView, UIInputViewAudioFeedback {
+        var enableInputClicksWhenVisible: Bool {
+            return true
+        }
+    }
+
+    private let emptyInputView = PulsarEmptyInputView()
     private func chatPresentationInterfaceStateInputView(_ state: ChatPresentationInterfaceState) -> UIView? {
         switch state.inputMode {
         case .text:

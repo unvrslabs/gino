@@ -7,7 +7,6 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     copts = [
-        "-suppress-warnings",
     ],
     deps = [
     ],

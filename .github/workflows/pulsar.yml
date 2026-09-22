@@ -1,0 +1,109 @@
+name: Pulsar su TestFlight
+
+# Si lancia a mano dalla pagina Actions, oppure da riga di comando con
+#   gh workflow run pulsar.yml -f numero=<n>
+on:
+  workflow_dispatch:
+    inputs:
+      numero:
+        description: "Numero della build (va alzato a ogni caricamento)"
+        required: true
+        default: "10"
+
+jobs:
+  costruisci:
+    # 🔴 macOS 26.6 RILASCIATO, non beta: e' l'unico modo perche' Apple
+    # accetti il caricamento. Con una beta risponde errore 90534.
+    runs-on: macos-26-arm64
+    timeout-minutes: 180
+
+    steps:
+      - name: Prendi il codice
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Usa Xcode 26.2, la versione che Telegram richiede
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app
+          xcodebuild -version
+          echo "SDK iOS: $(xcrun --sdk iphoneos --show-sdk-version)"
+
+      - name: Installa Bazel
+        run: |
+          brew install bazelisk
+          echo "8.4.2" > .bazelversion
+
+      - name: Rimetti il certificato di firma nel portachiavi
+        env:
+          CERT_P12: ${{ secrets.CERT_DISTRIBUZIONE_P12 }}
+          CERT_PWD: ${{ secrets.CERT_DISTRIBUZIONE_PWD }}
+        run: |
+          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p temporanea build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p temporanea build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PWD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k temporanea build.keychain >/dev/null
+          rm -f /tmp/cert.p12
+          security find-identity -v -p codesigning | grep -c Distribution
+
+      - name: Rimetti profili e configurazione
+        env:
+          PROFILI_TGZ: ${{ secrets.PROFILI_TGZ }}
+          CONFIG_JSON: ${{ secrets.CONFIGURAZIONE_JSON }}
+        run: |
+          mkdir -p codesigning/profiles codesigning/certs
+          echo "$PROFILI_TGZ" | base64 --decode | tar xz -C codesigning
+          echo "$CONFIG_JSON" | base64 --decode > /tmp/pulsar-configuration.json
+          chmod 600 /tmp/pulsar-configuration.json
+          ls codesigning/profiles
+
+      - name: Costruisci Pulsar
+        run: |
+          python3 build-system/Make/Make.py \
+            --cacheDir="$HOME/bazel-cache" \
+            --bazel="$(which bazelisk)" \
+            --overrideBazelVersion \
+            build \
+            --configurationPath=/tmp/pulsar-configuration.json \
+            --codesigningInformationPath="$PWD/codesigning" \
+            --buildNumber=${{ inputs.numero }} \
+            --configuration=release_arm64
+
+      - name: Controlla il timbro prima di caricare
+        run: |
+          rm -rf /tmp/verifica && mkdir /tmp/verifica && cd /tmp/verifica
+          unzip -q "$GITHUB_WORKSPACE/bazel-bin/Telegram/Telegram.ipa"
+          P=Payload/Telegram.app/Info.plist
+          for k in DTXcode DTSDKName CFBundleDisplayName CFBundleVersion; do
+            echo "$k = $(/usr/libexec/PlistBuddy -c "Print :$k" "$P")"
+          done
+          SDK=$(/usr/libexec/PlistBuddy -c "Print :DTSDKName" "$P")
+          case "$SDK" in
+            iphoneos27*) echo "::error::costruita con un SDK beta, Apple la rifiutera'"; exit 1 ;;
+          esac
+
+      - name: Carica su TestFlight
+        env:
+          ASC_KEY: ${{ secrets.ASC_AUTHKEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          mkdir -p ~/.private_keys
+          echo "$ASC_KEY" | base64 --decode > ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+          xcrun altool --upload-app -f bazel-bin/Telegram/Telegram.ipa -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER"
+          rm -f ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      - name: Tieni da parte il pacchetto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulsar-ipa
+          path: bazel-bin/Telegram/Telegram.ipa
+          if-no-files-found: warn

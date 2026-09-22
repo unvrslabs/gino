@@ -84,3 +84,12 @@ xcode-files
 **/node_modules/
 tools/sim-watcher/dist/
 .mcp.json
+
+# Pulsar: roba nostra che NON va pubblicata
+codesigning/
+codesigning-dev/
+*.bak.*
+*.bak
+/bazel-pulsar-ios
+scripts/asc/
+scripts/carica-testflight.sh
