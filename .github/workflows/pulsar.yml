@@ -128,6 +128,22 @@ jobs:
       # 🔴 GitHub concede 10 GB di cache per repo e sfratta le piu' vecchie.
       # Si pota a 6 GB togliendo i file toccati meno di recente, sennó una
       # cache gonfia butta fuori tutto il resto.
+      # 🔴 Caricare NON basta: il gruppo TestFlight ha hasAccessToAllBuilds a
+      # false e quell'attributo non si puo' piu' cambiare dopo la creazione,
+      # quindi ogni build va assegnata al gruppo o resta READY_FOR_BETA_TESTING
+      # e non la vede nessuno. Le build 11 e 12 sono rimaste ferme cosi'.
+      - name: Consegna la build ai tester
+        env:
+          ASC_KEY: ${{ secrets.ASC_AUTHKEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_APP_ID: "6814719172"
+          NUMERO: ${{ inputs.numero }}
+        run: |
+          echo "$ASC_KEY" | base64 --decode > /tmp/asc.p8
+          ASC_KEY_PATH=/tmp/asc.p8 node scripts/consegna-ai-tester.mjs
+          rm -f /tmp/asc.p8
+
       - name: Pota la cache di Bazel
         if: always()
         continue-on-error: true

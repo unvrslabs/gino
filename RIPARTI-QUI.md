@@ -17,7 +17,19 @@ gh workflow run pulsar.yml --repo unvrslabs/pulsar -f numero=11
 ```
 
 Un comando, da qualunque macchina. Il numero va **alzato ogni volta**: Apple rifiuta
-due build con lo stesso. Costruisce, controlla, carica su TestFlight e l'invito parte da sé.
+due build con lo stesso. Costruisce, controlla, carica, **assegna al gruppo** e aspetta
+che sia `IN_BETA_TESTING`.
+
+🔴 **Caricare non basta.** Il gruppo `Squadra UNVRS` ha `hasAccessToAllBuilds: false`, e
+quell'attributo **non si puo' piu' cambiare** dopo la creazione (Apple risponde 409, «can
+not be included in a 'UPDATE' operation»). Senza assegnazione la build resta
+`READY_FOR_BETA_TESTING` e sul telefono non compare: e' successo alle build 11 e 12 del
+22/09/2026, caricate e mai consegnate. Ci pensa `scripts/consegna-ai-tester.mjs`, chiamato
+dal workflow. Catena da verificare: `processingState` VALID → build assegnata al gruppo →
+`internalBuildState` = `IN_BETA_TESTING`.
+
+🔴 **La rete di casa verso `api.appstoreconnect.apple.com` cade spesso**: una sola chiamata
+torna `fetch failed` o, peggio, una lista incompleta che sembra vera. Sempre con ritentativi.
 
 ## 🔴 Perché NON si compila sul Mac di Emanuele
 
