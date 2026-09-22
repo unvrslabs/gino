@@ -65,11 +65,17 @@ jobs:
           PROFILI_TGZ: ${{ secrets.PROFILI_TGZ }}
           CONFIG_JSON: ${{ secrets.CONFIGURAZIONE_JSON }}
         run: |
-          mkdir -p codesigning/profiles codesigning/certs
-          echo "$PROFILI_TGZ" | base64 --decode | tar xz -C codesigning
+          # 🔴 L'archivio contiene gia' la cartella 'codesigning': va estratto
+          # nella radice, non dentro codesigning, sennó finiscono annidati due
+          # volte e la compilazione dice che mancano le notifiche push.
+          echo "$PROFILI_TGZ" | base64 --decode | tar xz -C .
           echo "$CONFIG_JSON" | base64 --decode > /tmp/pulsar-configuration.json
           chmod 600 /tmp/pulsar-configuration.json
-          ls codesigning/profiles
+          N=$(ls codesigning/profiles/*.mobileprovision 2>/dev/null | wc -l | tr -d ' ')
+          echo "profili trovati: $N"
+          [ "$N" -eq 7 ] || { echo "::error::attesi 7 profili, trovati $N"; exit 1; }
+          security cms -D -i codesigning/profiles/Telegram.mobileprovision \
+            | grep -q "aps-environment" && echo "notifiche push: ok"
 
       - name: Costruisci Pulsar
         run: |
