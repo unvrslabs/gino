@@ -76,6 +76,12 @@ Le icone alternative (Impostazioni ▸ Icona app) sono ancora gli aeroplanini di
 Telegram: stanno nelle cartelle `Telegram-iOS/*.alticon/`, elencate in
 `alternate_icon_folders`.
 
+🔴 **Mai riempire la casella iPad `76x76` a `1x`** nel `Contents.json`: Telegram la
+lascia senza file **apposta**. Se ci metti un PNG, actool ferma la build con
+«76x76@1x app icons only apply to iPad apps targeting releases of iOS prior to 10.0»
+(build 11, 22/09/2026, persi 18 minuti). L'avviso `ITMS-90892` riguarda 152 e 167,
+cioè `76x76@2x` e `83.5x83.5@2x`, che ci sono già.
+
 ## Le nostre modifiche a Telegram (tutte nel commit)
 
 - nome visibile **Gino** in `Telegram/BUILD`: due `CFBundleDisplayName` più il
