@@ -44,5 +44,5 @@ common:index_build --color=no
 
 
 
-# Pulsar: bazel non legge l'Xcode di sistema e sceglie da solo il piu' recente,
+# Gino: bazel non legge l'Xcode di sistema e sceglie da solo il piu' recente,
 # cioe' la beta. Con la beta Apple rifiuta il caricamento (errore 90534).

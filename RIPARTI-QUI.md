@@ -1,19 +1,19 @@
-# Gino (ex Pulsar) — riparti qui
+# Gino — riparti qui
 
 Telegram iOS forkato e rimarchiato, agganciato ai **server veri di Telegram**.
-Cartella locale `~/Developer/pulsar-ios`, repo pubblico `github.com/unvrslabs/pulsar` (ramo `pulsar`).
+Cartella locale `~/Developer/gino-ios`, repo pubblico `github.com/unvrslabs/gino` (ramo `gino`).
 
 ## Stato al 22/09/2026, 11:30
 
 🟢 **Su TestFlight e funzionante.** Build 10, versione 12.9.2, `dev.unvrslabs.pulsar`.
-Nome sullo store `UNVRS Pulsar`, 🔴 **da cambiare a mano su App Store Connect**.
-Nome sotto l'icona: **Gino** dalla build 11 (prima era Pulsar). Gruppo interno `Squadra UNVRS`, invitati
+Nome sullo store **Messaggino** (su App Store Connect). Il bundle id resta `dev.unvrslabs.pulsar`: Apple non lo fa cambiare, servirebbe un'app nuova.
+Nome sotto l'icona: **Gino** dalla build 11. Gruppo interno `Squadra UNVRS`, invitati
 `emanuele@maccari.io` e `emanuele@unvrslabs.dev`. App su App Store Connect: id **6814719172**.
 
 ## 🔴 Come si pubblica una versione nuova
 
 ```
-gh workflow run pulsar.yml --repo unvrslabs/pulsar -f numero=11
+gh workflow run gino.yml --repo unvrslabs/gino -f numero=11
 ```
 
 Un comando, da qualunque macchina. Il numero va **alzato ogni volta**: Apple rifiuta
@@ -43,7 +43,7 @@ Il Mac gira una **beta di macOS** (build `26A5425a`). Da lì discende tutto:
 - Vale anche per la **Release Candidate**: provata, stesso errore.
 - `softwareupdate -l` offre solo altre beta: il Mac è iscritto al programma beta.
 
-Non è un problema di Pulsar: **nessuna app di UNVRS si può caricare da questo Mac**
+Non è un problema di Gino: **nessuna app di UNVRS si può caricare da questo Mac**
 finché c'è la beta. La compilazione in cloud serve per tutte.
 
 Xcode 26.2 resta installato in `/Applications/Xcode.app` (inutile in locale).
@@ -137,16 +137,16 @@ following issues» (scartata).
   modulo NON funziona: in entrambi i casi modulo e classe interna hanno lo stesso nome
   e vince la classe
 - `.gitmodules`: indirizzi assoluti (trappola 2)
-- `.github/workflows/pulsar.yml`: la procedura
+- `.github/workflows/gino.yml`: la procedura
 
 ## Segreti
 
-Su GitHub (`gh secret list --repo unvrslabs/pulsar`): `CERT_DISTRIBUZIONE_P12`,
+Su GitHub (`gh secret list --repo unvrslabs/gino`): `CERT_DISTRIBUZIONE_P12`,
 `CERT_DISTRIBUZIONE_PWD`, `PROFILI_TGZ`, `CONFIGURAZIONE_JSON`, `ASC_AUTHKEY_P8`,
 `ASC_KEY_ID`, `ASC_ISSUER_ID`.
 Si rifanno con `bash scripts/prepara-cloud.sh` (lo lancia Emanuele: tocca la chiave
 privata di firma). In locale le chiavi Telegram stanno in
-`~/Developer/_segreti/pulsar-configuration.json`, permessi 600, fuori dal repo.
+`~/Developer/_segreti/gino-configuration.json`, permessi 600, fuori dal repo.
 
 Identificativi: 7 (app più Share, Widget, NotificationContent, NotificationService,
 SiriIntents, BroadcastUpload). Profili App Store in `codesigning/`, di sviluppo in
@@ -182,7 +182,7 @@ le impostazioni dell'Xcode beta: `.bazelrc`, `minimum_os_version` a 15.0 in
 ```
 cd ~/Developer/gino-simulatore
 python3 build-system/Make/Make.py --overrideXcodeVersion --cacheDir ~/telegram-bazel-cache \
-  build --configurationPath ~/Developer/_segreti/pulsar-configuration.json \
+  build --configurationPath ~/Developer/_segreti/gino-configuration.json \
   --codesigningInformationPath "$PWD/codesigning-dev" --buildNumber=1 --configuration=debug_sim_arm64
 
 APP=$(find -L bazel-out -maxdepth 14 -path "*Telegram_archive-root/Payload/Telegram.app" -type d | head -1)
@@ -203,7 +203,7 @@ Runtime installati: iOS 26.0 (23A343) e iOS 27.0 (24A5408d).
 1. **Un worktree non porta i sotto-moduli**: `git submodule update --init --recursive`
    nel banco. Sono 13, non riscarica niente perche' i dati sono gia' in locale.
 2. **`codesigning/` e `codesigning-dev/` sono ignorate da git**, quindi nel worktree non
-   ci sono: vanno copiate da `~/Developer/pulsar-ios`.
+   ci sono: vanno copiate da `~/Developer/gino-ios`.
 3. **`-suppress-warnings` va in conflitto** con il `-Wwarning` che serve alla beta:
    `error: conflicting options`. Va tolto da `FlatBuffers`, `Swift2D`, `XMLCoder`.
 4. **Il bundle id e' `dev.unvrslabs.pulsar`**, non `ph.telegra.Telegraph`: lanciare con
@@ -220,7 +220,6 @@ non si vedono le impostazioni, quindi non si verifica niente di quello che tocch
   più niente nome utente pubblico e numero chiuso nelle impostazioni Telegram.
   🔴 La lista NON va scritta nell'app, va letta all'avvio da un file sul VPS
 - Icone alternative: sostituire gli aeroplanini nelle cartelle `*.alticon/`
-- Cambiare il nome su App Store Connect (ora è ancora `UNVRS Pulsar`)
 - Capire perché al primo avvio col cavo l'app si chiudeva (poi partiva lanciata dal Mac)
 
 ## Salvare la cache tra le corse

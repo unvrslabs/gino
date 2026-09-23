@@ -1,7 +1,7 @@
-name: Pulsar su TestFlight
+name: Gino su TestFlight
 
 # Si lancia a mano dalla pagina Actions, oppure da riga di comando con
-#   gh workflow run pulsar.yml -f numero=<n>
+#   gh workflow run gino.yml -f numero=<n>
 on:
   workflow_dispatch:
     inputs:
@@ -80,22 +80,22 @@ jobs:
           # nella radice, non dentro codesigning, sennó finiscono annidati due
           # volte e la compilazione dice che mancano le notifiche push.
           echo "$PROFILI_TGZ" | base64 --decode | tar xz -C .
-          echo "$CONFIG_JSON" | base64 --decode > /tmp/pulsar-configuration.json
-          chmod 600 /tmp/pulsar-configuration.json
+          echo "$CONFIG_JSON" | base64 --decode > /tmp/gino-configuration.json
+          chmod 600 /tmp/gino-configuration.json
           N=$(ls codesigning/profiles/*.mobileprovision 2>/dev/null | wc -l | tr -d ' ')
           echo "profili trovati: $N"
           [ "$N" -eq 7 ] || { echo "::error::attesi 7 profili, trovati $N"; exit 1; }
           security cms -D -i codesigning/profiles/Telegram.mobileprovision \
             | grep -q "aps-environment" && echo "notifiche push: ok"
 
-      - name: Costruisci Pulsar
+      - name: Costruisci Gino
         run: |
           python3 build-system/Make/Make.py \
             --cacheDir="$HOME/bazel-cache" \
             --bazel="$(which bazelisk)" \
             --overrideBazelVersion \
             build \
-            --configurationPath=/tmp/pulsar-configuration.json \
+            --configurationPath=/tmp/gino-configuration.json \
             --codesigningInformationPath="$PWD/codesigning" \
             --buildNumber=${{ inputs.numero }} \
             --configuration=release_arm64
@@ -176,6 +176,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pulsar-ipa
+          name: gino-ipa
           path: bazel-bin/Telegram/Telegram.ipa
           if-no-files-found: warn
