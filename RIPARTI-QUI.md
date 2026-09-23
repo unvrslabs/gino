@@ -172,47 +172,47 @@ contestare a un fork.
   configurazione, è rumore
 - `ITMS-90683` manca `NSLocationAlwaysAndWhenInUseUsageDescription`
 
-## Banco locale col simulatore (22/09/2026 sera, in piedi a meta')
+## Banco locale col simulatore — 🟢 FUNZIONA
 
 Worktree `~/Developer/gino-simulatore`, ramo `banco-simulatore`. Serve a vedere le
-modifiche in minuti invece di passare da TestFlight. Differisce da `master` solo per
-le impostazioni dell'Xcode beta: `.bazelrc` e `minimum_os_version` a 15.0 in
-`Telegram/BUILD` e `submodules/TextFormat/BUILD`.
+modifiche in minuti invece di passare da TestFlight. Differisce da `master` **solo** per
+le impostazioni dell'Xcode beta: `.bazelrc`, `minimum_os_version` a 15.0 in
+`Telegram/BUILD` e `submodules/TextFormat/BUILD`, e `-suppress-warnings` tolto da tre BUILD.
 
 ```
 cd ~/Developer/gino-simulatore
 python3 build-system/Make/Make.py --overrideXcodeVersion --cacheDir ~/telegram-bazel-cache \
   build --configurationPath ~/Developer/_segreti/pulsar-configuration.json \
   --codesigningInformationPath "$PWD/codesigning-dev" --buildNumber=1 --configuration=debug_sim_arm64
+
+APP=$(find -L bazel-out -maxdepth 14 -path "*Telegram_archive-root/Payload/Telegram.app" -type d | head -1)
+xcrun simctl install <SIM> "$APP" && xcrun simctl launch <SIM> dev.unvrslabs.pulsar
 ```
 
-**Compila** (11 minuti la prima volta) e l'app **si installa**. 🔴 **Ma non si apre.**
+🔴 **Il simulatore deve essere iOS 26, non iOS 27.** Su iOS 27 l'app crasha subito con
+`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`: quella versione pretende
+l'adozione vera del ciclo di vita a scene e Telegram e' scritta col modello vecchio.
+Mettere `UIApplicationSceneManifest` nel plist **non basta**, provato. Su iOS 26 lo stesso
+controllo e' solo un avviso e l'app parte.
 
-### Le trappole gia' pagate
+Simulatore gia' creato: `iPhone 17 Pro iOS26`, id `E371893B-416B-434C-AC5F-CA05B17B96EF`.
+Runtime installati: iOS 26.0 (23A343) e iOS 27.0 (24A5408d).
+
+### Le quattro trappole gia' pagate
 
 1. **Un worktree non porta i sotto-moduli**: `git submodule update --init --recursive`
    nel banco. Sono 13, non riscarica niente perche' i dati sono gia' in locale.
-2. **Le cartelle `codesigning/` e `codesigning-dev/` sono ignorate da git**, quindi nel
-   worktree non ci sono: vanno copiate da `~/Developer/pulsar-ios`.
-3. **`-suppress-warnings` nei BUILD va in conflitto** con il `-Wwarning` che serve alla
-   beta: `error: conflicting options`. Nel banco va tolto da `FlatBuffers`, `Swift2D`,
-   `XMLCoder`.
-4. 🔴 **L'app crasha all'avvio sul simulatore iOS 27**:
-   `UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`. iOS 27 pretende
-   l'adozione vera del ciclo di vita a scene, e Telegram e' scritta col modello vecchio.
-   Aggiungere `UIApplicationSceneManifest` al plist **NON basta**: provato, stesso crash.
-   Serve un `UISceneDelegate` vero, cioe' codice dentro Telegram.
+2. **`codesigning/` e `codesigning-dev/` sono ignorate da git**, quindi nel worktree non
+   ci sono: vanno copiate da `~/Developer/pulsar-ios`.
+3. **`-suppress-warnings` va in conflitto** con il `-Wwarning` che serve alla beta:
+   `error: conflicting options`. Va tolto da `FlatBuffers`, `Swift2D`, `XMLCoder`.
+4. **Il bundle id e' `dev.unvrslabs.pulsar`**, non `ph.telegra.Telegraph`: lanciare con
+   quello sbagliato da' `FBSOpenApplicationServiceErrorDomain code=4`.
 
-### Dove eravamo rimasti
+### Da fare
 
-Scaricamento del **simulatore iOS 26.0** (`23A343`, 8 GB) avviato il 22/09 alle 23:02.
-L'idea: l'app e' scritta per iOS 26, e su quella versione di UIKit il controllo delle
-scene e' un avviso e non un errore (sul telefono di Emanuele, con iOS 26, la build 14
-gira). 🔴 **Da verificare**: qui l'app resta costruita con l'SDK 27, e non e' detto che
-basti il runtime piu' vecchio.
-
-Se non basta, l'unica strada pulita e' un Xcode 26 funzionante, che su questo Mac non
-parte per via della beta di macOS: vedi [[reference_mac_beta_niente_caricamenti_apple]].
+Accedere una volta sola col numero di Emanuele sul simulatore: senza account collegato
+non si vedono le impostazioni, quindi non si verifica niente di quello che tocchiamo li'.
 
 ## Da fare
 
